@@ -14,7 +14,6 @@
 | 模组名 | SDMap |
 | 作者 | Chengxidaxia |
 | GUID | `com.chengxidaxia.sdmap` |
-| 版本 | 1.0.0 |
 | 注入方式 | BepInEx 5（Harmony 补丁） |
 | 默认快捷键 | M（可配置） |
 | 适配 | Stranded Deep v1.0.38.0.29 |
@@ -43,10 +42,9 @@
 ## 安装
 
 1. 确保已安装 **BepInEx**（BepInEx.New 目录）。
-2. 将 `SDMap.dll` 放入 `Stranded_Deep_Data\BepInEx.New\plugins\SDMap\`。
+2. 将 `SDMap.dll` 放入 `{BeplnEx}\plugins\SDMap\`。
 3. 启动游戏，进入存档后按 `M` 打开大地图验证。
 
-> 依赖：游戏本体 Assembly-CSharp / BepInEx / Harmony / Rewired / bolt 等，模组目录 `bin\Debug\` 已包含编译所需引用。
 
 ---
 
