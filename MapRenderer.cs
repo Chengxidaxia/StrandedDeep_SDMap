@@ -473,9 +473,9 @@ private static int WorldmapRTForZoom(float zoom, int mapSize)
             return Mathf.Clamp(capped, mapSize, 2048);
         }
 
-        // 用正交/透视摄像机从上方渲染地形，异步回读 Texture2D（节流）。
-        // RT 分辨率随 size 动态重建；用 AsyncGPUReadback 异步回读，避免同步 ReadPixels 阻塞主线程，
-        // 最大化利用 CPU/GPU 并行（渲染在 GPU，回读不卡 CPU）。
+        // 用正交/透视摄像机从上方渲染地形，同步回读 Texture2D（节流）。
+        // RT 分辨率随 size 动态重建；用同步 ReadPixels 回读（与 RenderTopDownTiled 一致），
+        // 保证方向正确 —— AsyncGPUReadback 在 DX 平台会垂直翻转，导致地图/三角标方向反。
         private static void RenderTopDown(Camera cam, Vector3 center, float orthoSize, bool lowLayer, bool highDetail,
             ref RenderTexture rt, ref Texture2D tex, int size)
         {
@@ -528,22 +528,15 @@ private static int WorldmapRTForZoom(float zoom, int mapSize)
             SetPlayersThirdPersonForMap(false);
             SetTerrainHighDetail(false);
 
-            // lambda 不能捕获 ref 参数，复制引用到局部变量；若纹理尺寸已变（重建过）则丢弃过期回调
-            Texture2D targetTex = tex;
-            AsyncGPUReadback.Request(rt, 0, TextureFormat.RGB24, delegate (AsyncGPUReadbackRequest req)
-            {
-                if (req.hasError)
-                {
-                    return;
-                }
-                if (targetTex == null || targetTex.width != size || targetTex.height != size)
-                {
-                    return;
-                }
-                byte[] data = req.GetData<byte>().ToArray();
-                targetTex.LoadRawTextureData(data);
-                targetTex.Apply();
-            });
+            // 同步读回（与 RenderTopDownTiled 的 ReadPixels 保持一致，方向由 Unity 统一处理）。
+            // 之前用 AsyncGPUReadback：在 Windows(DX) 平台读 RT 时 v=0 在顶部，
+            // LoadRawTextureData 按"y=0 在底部"解释 → 地图整体垂直翻转（南北镜像），
+            // 玩家三角标（不翻转）相对地图反 180° —— "三角标又反了"的根因。
+            RenderTexture prev = RenderTexture.active;
+            RenderTexture.active = rt;
+            tex.ReadPixels(new Rect(0f, 0f, size, size), 0, 0);
+            RenderTexture.active = prev;
+            tex.Apply();
         }
 
         // TileMap/TMCache：分块渲染拼接，突破单相机 RT 分辨率上限（同步 ReadPixels，采样帧率低时无感）。
